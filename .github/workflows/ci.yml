@@ -3,8 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: read
@@ -13,39 +12,27 @@ jobs:
   qualite:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configurer Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
-
-      - name: Installer les dépendances
-        run: npm ci
-
-      - name: Vérifier le lint
-        run: npm run lint -- --max-warnings=0
-
-      - name: Exécuter les tests
-        run: npm test
-
-      - name: Vérifier la couverture de src/devis
-        run: node --test --experimental-test-coverage --test-coverage-include='src/devis/**' --test-coverage-lines=80 --test-coverage-branches=80
+      - run: npm ci
+      - run: npm run lint -- --max-warnings=0
+      - run: npm test
+      - run: >
+          node --disable-warning=ExperimentalWarning --test --experimental-test-coverage
+          --test-coverage-include='src/devis/**'
+          --test-coverage-lines=80 --test-coverage-branches=80
 
   secrets:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
-      - name: Installer gitleaks
-        run: |
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz -o "$RUNNER_TEMP/gitleaks.tar.gz"
-          sudo tar -xz -f "$RUNNER_TEMP/gitleaks.tar.gz" -C /usr/local/bin gitleaks
-
-      - name: Rechercher les secrets
-        run: gitleaks git -v --no-banner --redact --log-opts="HEAD" .
+      - run: |
+          V=8.30.1
+          URL=https://github.com/gitleaks/gitleaks/releases/download
+          curl -sSfL "$URL/v$V/gitleaks_${V}_linux_x64.tar.gz" | tar xz -C /usr/local/bin gitleaks
+      - run: gitleaks git -v --no-banner --redact --log-opts="HEAD" .
